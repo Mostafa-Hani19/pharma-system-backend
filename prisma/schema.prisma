@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+////////////////////////////////////////////////////////////
+// 🏢 الشركات الموردة (اختيارية لكل مخزن)
+////////////////////////////////////////////////////////////
+model Company {
+  id         Int         @id @default(autoincrement())
+  name       String
+  email      String?
+  phone      String?
+  warehouses Warehouse[] // ← كل شركة ممكن يكون ليها أكتر من مخزن
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+////////////////////////////////////////////////////////////
+// 🏢 المخزن
+////////////////////////////////////////////////////////////
+model Warehouse {
+  id        Int                 @id @default(autoincrement())
+  name      String
+  location  String
+  isActive  Boolean             @default(true)
+  medicines WarehouseMedicine[] // ← الأدوية الموجودة في المخزن
+  companyId Int?
+  company   Company?            @relation(fields: [companyId], references: [id])
+  requests  WarehouseRequest[] // ← الطلبات اللي جات من الصيدليات
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+////////////////////////////////////////////////////////////
+// 💊 الأدوية الخاصة بالمخزن
+////////////////////////////////////////////////////////////
+model WarehouseMedicine {
+  id               Int      @id @default(autoincrement())
+  warehouseId      Int
+  name             String
+  activeIngredient String? // ← المادة الفعالة (اختياري)
+  price            Float
+  quantity         Int
+  expirationDate   DateTime
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+}
+
+////////////////////////////////////////////////////////////
+// 🏥 الصيدلية
+////////////////////////////////////////////////////////////
+model Pharmacy {
+  id        Int                @id @default(autoincrement())
+  name      String
+  address   String
+  email     String             @unique
+  password  String
+  isActive  Boolean            @default(true)
+  medicines PharmacyMedicine[] // ← الأدوية الخاصة بالصيدلية
+  requests  WarehouseRequest[] // ← الطلبات اللي بتعملها من المخازن
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+}
+
+////////////////////////////////////////////////////////////
+// 💊 الأدوية الخاصة بالصيدلية (مستقلة)
+////////////////////////////////////////////////////////////
+model PharmacyMedicine {
+  id               Int      @id @default(autoincrement())
+  pharmacyId       Int
+  name             String
+  activeIngredient String? // ← المادة الفعالة (اختياري)
+  price            Float
+  quantity         Int
+  expirationDate   DateTime
+
+  pharmacy Pharmacy @relation(fields: [pharmacyId], references: [id])
+}
+
+////////////////////////////////////////////////////////////
+// 🧾 الطلب بين الصيدلية والمخزن
+////////////////////////////////////////////////////////////
+model WarehouseRequest {
+  id           Int      @id @default(autoincrement())
+  pharmacyId   Int
+  warehouseId  Int
+  medicineName String
+  quantity     Int
+  status       String   @default("pending") // pending | approved | rejected | delivered
+  createdAt    DateTime @default(now())
+
+  pharmacy  Pharmacy  @relation(fields: [pharmacyId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+}
+
+////////////////////////////////////////////////////////////
+// 👤 المستخدم (المريض)
+////////////////////////////////////////////////////////////
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
